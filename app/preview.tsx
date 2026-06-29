@@ -1,15 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-
-import { analyzeImage } from "../lib/gemini";
 import { imageToBase64 } from "../lib/image";
 
 export default function PreviewScreen() {
@@ -19,26 +20,38 @@ export default function PreviewScreen() {
 
   const [loading, setLoading] = useState(false);
 
-  async function analyze() {
-    if (!photoUri) return;
-
+  async function analyze(type: string) {
     try {
       setLoading(true);
 
-      const base64 = await imageToBase64(photoUri);
+      const base64 = await imageToBase64(photoUri!);
 
-      const result = await analyzeImage(base64);
+      const response = await fetch("http://192.168.1.5:5000/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          image: base64,
+          mode: type,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message);
+      }
 
       router.push({
         pathname: "/result",
         params: {
           photoUri,
-          result,
+          result: data.result,
         },
       });
-    } catch (error) {
-      console.log(error);
-      alert("Failed to analyze image.");
+    } catch (err: any) {
+      Alert.alert("VisionAI", err.message);
     } finally {
       setLoading(false);
     }
@@ -49,27 +62,50 @@ export default function PreviewScreen() {
       <Image
         source={{ uri: photoUri }}
         style={styles.image}
-        contentFit="contain"
+        contentFit="cover"
       />
 
       {loading ? (
         <View style={styles.loading}>
-          <ActivityIndicator size="large" />
-          <Text style={{ marginTop: 15 }}>Gemini is analyzing...</Text>
+          <ActivityIndicator size="large" color="#7C3AED" />
+
+          <Text style={styles.loadingText}>VisionAI is analyzing...</Text>
         </View>
       ) : (
-        <View style={styles.bottom}>
-          <TouchableOpacity
-            style={styles.grayButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.text}>Retake</Text>
+        <>
+          <TouchableOpacity style={styles.retake} onPress={() => router.back()}>
+            <Ionicons name="camera-reverse" size={22} color="white" />
+
+            <Text style={styles.retakeText}>Retake</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.blueButton} onPress={analyze}>
-            <Text style={styles.text}>Analyze</Text>
+          <TouchableOpacity onPress={() => analyze("academic")}>
+            <LinearGradient
+              colors={["#7C3AED", "#5B21B6"]}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>Academic Analysis</Text>
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
+
+          <TouchableOpacity onPress={() => analyze("safety")}>
+            <LinearGradient
+              colors={["#9333EA", "#6D28D9"]}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>Safety Analysis</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => analyze("inventory")}>
+            <LinearGradient
+              colors={["#A855F7", "#7E22CE"]}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>Inventory Analysis</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
@@ -78,42 +114,53 @@ export default function PreviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
-  },
-
-  image: {
-    flex: 1,
-    width: "100%",
-  },
-
-  bottom: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
+    backgroundColor: "#050816",
     padding: 20,
   },
 
-  blueButton: {
-    backgroundColor: "#2563EB",
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 10,
+  image: {
+    width: "100%",
+    height: 340,
+    borderRadius: 25,
+    marginBottom: 25,
   },
 
-  grayButton: {
-    backgroundColor: "#666",
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 10,
+  retake: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 25,
   },
 
-  text: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+  retakeText: {
+    color: "white",
+    marginLeft: 8,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  button: {
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 18,
+  },
+
+  buttonText: {
+    color: "white",
+    textAlign: "center",
+    fontWeight: "800",
+    fontSize: 18,
   },
 
   loading: {
-    padding: 30,
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
+  },
+
+  loadingText: {
+    color: "white",
+    marginTop: 18,
+    fontSize: 18,
   },
 });

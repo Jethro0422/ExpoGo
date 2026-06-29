@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: "20mb" }));
+app.use(express.json({ limit: "25mb" }));
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -17,19 +17,93 @@ const ai = new GoogleGenAI({
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "VisionAI Backend Running",
+    message: "VisionAI Backend Running 🚀",
   });
 });
 
 app.post("/analyze", async (req, res) => {
   try {
-    const { image } = req.body;
+    const { image, mode } = req.body;
 
     if (!image) {
       return res.status(400).json({
         success: false,
         message: "No image received.",
       });
+    }
+
+    let prompt = "";
+
+    switch (mode) {
+      case "academic":
+        prompt = `
+You are VisionAI.
+
+Analyze this image for educational purposes.
+
+Return ONLY this format.
+
+Object:
+Category:
+Confidence:
+Description:
+Recommendation:
+
+Rules:
+- Confidence must be 0-100%.
+- Description should only be 2-3 sentences.
+- Recommendation should only be one sentence.
+- No markdown.
+- No bullet points.
+`;
+        break;
+
+      case "safety":
+        prompt = `
+You are VisionAI.
+
+Analyze this image for safety hazards.
+
+Return ONLY this format.
+
+Hazards:
+Risk Level:
+Description:
+Recommendation:
+
+Rules:
+- Risk Level should be Low, Medium or High.
+- Description should only be 2-3 sentences.
+- Recommendation should only be one sentence.
+- No markdown.
+`;
+        break;
+
+      case "inventory":
+        prompt = `
+You are VisionAI.
+
+Analyze this image like an inventory management system.
+
+Return ONLY this format.
+
+Detected Objects:
+Estimated Quantity:
+Condition:
+Recommendation:
+
+Rules:
+- Count visible objects.
+- Describe their condition.
+- Recommendation should be one sentence.
+- No markdown.
+`;
+        break;
+
+      default:
+        prompt = `
+Describe this image briefly.
+`;
     }
 
     const response = await ai.models.generateContent({
@@ -42,40 +116,23 @@ app.post("/analyze", async (req, res) => {
           },
         },
         {
-          text: `
-You are VisionAI.
-
-Analyze the uploaded image.
-
-Return ONLY this format.
-
-Object:
-Category:
-Confidence:
-Description:
-Recommendation:
-
-Rules:
-- Confidence should be 0-100%.
-- Description must be 2-3 sentences only.
-- Recommendation must be one sentence.
-- Do not use markdown.
-- Do not add introductions or conclusions.
-`,
+          text: prompt,
         },
       ],
     });
 
+    const result = response.text || "VisionAI could not analyze the image.";
+
     res.json({
       success: true,
-      result: response.text,
+      result,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Gemini Error:", error);
 
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Internal Server Error",
     });
   }
 });
