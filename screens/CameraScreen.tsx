@@ -1,45 +1,71 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { router } from "expo-router";
 import { useRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { router } from "expo-router";
 
 export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
 
   if (!permission) {
-    return <View style={styles.container} />;
+    return (
+      <View style={styles.center}>
+        <Text>Loading camera...</Text>
+      </View>
+    );
   }
 
   if (!permission.granted) {
     return (
-      <View style={styles.permissionContainer}>
+      <View style={styles.center}>
         <Text style={styles.permissionText}>
           Camera permission is required.
         </Text>
 
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+        <TouchableOpacity
+          style={styles.permissionButton}
+          onPress={requestPermission}
+        >
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-async function takePicture() {
-  if (!cameraRef.current) return;
+  async function takePicture() {
+    try {
+      if (!cameraRef.current) return;
 
-  const photo = await cameraRef.current.takePictureAsync({
-    quality: 0.7,
-  });
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+      });
 
-  if (!photo) return;
+      if (!photo) return;
 
-  router.push({
-    pathname: "/preview",
-    params: {
-      photoUri: photo.uri,
-    },
-  });
+      console.log(photo.uri);
+
+      router.push({
+        pathname: "/preview",
+        params: {
+          photoUri: photo.uri,
+        },
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  return (
+    <View style={styles.container}>
+      <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+
+      <View style={styles.overlay}>
+        <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+          <Text style={styles.buttonText}>Capture</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -51,39 +77,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  captureButton: {
+  overlay: {
     position: "absolute",
+    left: 0,
+    right: 0,
     bottom: 40,
-    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  captureButton: {
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 35,
+    paddingVertical: 16,
+    borderRadius: 50,
+    elevation: 5,
+  },
+
+  permissionButton: {
     backgroundColor: "#2563EB",
     paddingHorizontal: 30,
-    paddingVertical: 14,
-    borderRadius: 30,
-  },
-
-  permissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-
-  permissionText: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: "center",
-  },
-
-  button: {
-    backgroundColor: "#2563EB",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 15,
     borderRadius: 10,
+    marginTop: 20,
   },
 
   buttonText: {
     color: "#fff",
+    fontSize: 18,
     fontWeight: "bold",
-    fontSize: 16,
+  },
+
+  permissionText: {
+    fontSize: 18,
+    textAlign: "center",
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
 });

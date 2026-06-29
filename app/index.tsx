@@ -1,5 +1,5 @@
-import { CameraView } from "expo-camera";
+import CameraScreen from "../screens/CameraScreen";
 
 export default function Index() {
-  return <CameraView style={{ flex: 1 }} />;
+  return <CameraScreen />;
 }

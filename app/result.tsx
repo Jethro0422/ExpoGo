@@ -1,22 +1,33 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { ScrollView, StyleSheet, Text } from "react-native";
 
 export default function ResultScreen() {
+  const { result } = useLocalSearchParams<{
+    result: string;
+  }>();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>AI Result Screen (Coming Next)</Text>
-    </View>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>VisionAI Result</Text>
+
+      <Text style={styles.result}>{result}</Text>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 25,
   },
 
-  text: {
-    fontSize: 20,
+  title: {
+    fontSize: 28,
     fontWeight: "bold",
+    marginBottom: 25,
+  },
+
+  result: {
+    fontSize: 18,
+    lineHeight: 30,
   },
 });
